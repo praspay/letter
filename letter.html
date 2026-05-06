@@ -1,0 +1,663 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Identity V — Mail</title>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@400;700&family=Cinzel:wght@400;600&family=IM+Fell+English:ital@0;1&family=UnifrakturMaguntia&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --parchment: #e8d5b0;
+    --parchment-dark: #c9b07a;
+    --parchment-light: #f2e4c4;
+    --sepia-deep: #2a1a0a;
+    --sepia-mid: #5c3d1e;
+    --sepia-light: #8b6340;
+    --ink: #1a0f05;
+    --ink-faded: #4a3520;
+    --red-accent: #8b1a1a;
+    --gold: #b8860b;
+    --gold-light: #d4a843;
+    --wood-dark: #1c1008;
+    --shadow-color: rgba(10, 5, 0, 0.7);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'IM Fell English', serif;
+    background: var(--wood-dark);
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    position: relative;
+  }
+
+  /* Dark vignette background like the game */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background:
+      radial-gradient(ellipse at center, transparent 30%, rgba(0,0,0,0.85) 100%),
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23n)' opacity='0.08'/%3E%3C/svg%3E");
+    z-index: 0;
+  }
+
+  /* Atmospheric fog at edges */
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background:
+      radial-gradient(ellipse 60% 40% at 0% 50%, rgba(30,15,5,0.6) 0%, transparent 60%),
+      radial-gradient(ellipse 60% 40% at 100% 50%, rgba(30,15,5,0.6) 0%, transparent 60%);
+    z-index: 0;
+    pointer-events: none;
+  }
+
+  /* Floating particles */
+  .particles {
+    position: fixed;
+    inset: 0;
+    z-index: 1;
+    pointer-events: none;
+    overflow: hidden;
+  }
+  .particle {
+    position: absolute;
+    width: 2px;
+    height: 2px;
+    background: rgba(212, 168, 67, 0.4);
+    border-radius: 50%;
+    animation: float-up linear infinite;
+  }
+  @keyframes float-up {
+    0% { transform: translateY(100vh) translateX(0) scale(0); opacity: 0; }
+    10% { opacity: 1; }
+    90% { opacity: 0.3; }
+    100% { transform: translateY(-10vh) translateX(var(--drift)) scale(1.5); opacity: 0; }
+  }
+
+  /* Main container */
+  .scene {
+    position: relative;
+    z-index: 2;
+    width: 900px;
+    max-width: 98vw;
+    animation: scene-in 1.2s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+  @keyframes scene-in {
+    from { opacity: 0; transform: translateY(30px) scale(0.97); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+  }
+
+  /* Tab bar on left — game UI style */
+  .tab-bar {
+    position: absolute;
+    left: -76px;
+    top: 40px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    z-index: 3;
+  }
+  .tab {
+    width: 78px;
+    padding: 12px 10px;
+    background: linear-gradient(135deg, #3d2810 0%, #2a1a0a 100%);
+    border: 1px solid rgba(184, 134, 11, 0.3);
+    border-right: none;
+    color: var(--parchment-dark);
+    font-family: 'Cinzel', serif;
+    font-size: 11px;
+    text-align: center;
+    cursor: pointer;
+    position: relative;
+    letter-spacing: 0.05em;
+    transition: all 0.2s;
+    clip-path: polygon(0 0, 85% 0, 100% 15%, 100% 100%, 0 100%);
+  }
+  .tab.active {
+    background: linear-gradient(135deg, #c9b07a 0%, #e8d5b0 100%);
+    color: var(--sepia-deep);
+    font-weight: 600;
+    border-color: var(--gold);
+  }
+  .tab:hover:not(.active) {
+    background: linear-gradient(135deg, #5c3d1e 0%, #3d2810 100%);
+    color: var(--parchment-light);
+  }
+
+  /* Book-like main panel */
+  .mail-panel {
+    display: flex;
+    background: linear-gradient(160deg, #d4b882 0%, #c9a86a 40%, #b8965a 100%);
+    border-radius: 2px;
+    box-shadow:
+      0 0 0 3px #8b6340,
+      0 0 0 5px #5c3d1e,
+      0 8px 40px rgba(0,0,0,0.8),
+      inset 0 1px 0 rgba(255,255,255,0.15);
+    min-height: 520px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  /* Paper texture overlay */
+  .mail-panel::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='400' height='400' filter='url(%23n)' opacity='0.06'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  /* Left: mail list */
+  .mail-list {
+    width: 280px;
+    flex-shrink: 0;
+    background: linear-gradient(180deg, #c9a86a 0%, #b89050 100%);
+    border-right: 2px solid rgba(92, 61, 30, 0.4);
+    padding: 12px 0;
+    position: relative;
+    z-index: 2;
+  }
+
+  .mail-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 16px;
+    cursor: pointer;
+    border-bottom: 1px solid rgba(92, 61, 30, 0.2);
+    position: relative;
+    transition: background 0.15s;
+  }
+  .mail-item:hover { background: rgba(255,255,255,0.08); }
+  .mail-item.active {
+    background: rgba(232, 213, 176, 0.4);
+    border-left: 3px solid var(--gold);
+  }
+
+  .mail-icon {
+    width: 32px;
+    height: 32px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .mail-icon svg { width: 28px; height: 28px; }
+
+  .mail-meta {
+    flex: 1;
+    min-width: 0;
+  }
+  .mail-title {
+    font-family: 'Cinzel', serif;
+    font-size: 11px;
+    color: var(--sepia-deep);
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    letter-spacing: 0.03em;
+  }
+  .mail-date {
+    font-family: 'IM Fell English', serif;
+    font-size: 10px;
+    color: var(--sepia-mid);
+    margin-top: 2px;
+    font-style: italic;
+  }
+
+  .read-stamp {
+    font-family: 'Cinzel', serif;
+    font-size: 9px;
+    color: rgba(92, 61, 30, 0.5);
+    border: 1.5px solid rgba(92, 61, 30, 0.35);
+    padding: 2px 6px;
+    border-radius: 1px;
+    transform: rotate(-8deg);
+    letter-spacing: 0.1em;
+    flex-shrink: 0;
+  }
+  .mail-item.active .read-stamp {
+    color: var(--red-accent);
+    border-color: var(--red-accent);
+    opacity: 0.7;
+  }
+
+  /* Bottom action buttons */
+  .mail-actions {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    display: flex;
+    gap: 6px;
+    padding: 10px 10px;
+    background: rgba(92, 61, 30, 0.15);
+    border-top: 1px solid rgba(92, 61, 30, 0.3);
+  }
+  .action-btn {
+    flex: 1;
+    padding: 8px 4px;
+    background: linear-gradient(180deg, #3d2e1a 0%, #2a1a0a 100%);
+    border: 1px solid rgba(184, 134, 11, 0.4);
+    color: var(--parchment);
+    font-family: 'Cinzel', serif;
+    font-size: 10px;
+    cursor: pointer;
+    text-align: center;
+    letter-spacing: 0.05em;
+    transition: all 0.2s;
+    clip-path: polygon(4px 0, 100% 0, calc(100% - 4px) 100%, 0 100%);
+  }
+  .action-btn:hover {
+    background: linear-gradient(180deg, #5c3d1e 0%, #3d2e1a 100%);
+    color: var(--gold-light);
+  }
+
+  /* Right: mail content */
+  .mail-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 30px 36px 20px;
+    position: relative;
+    z-index: 2;
+  }
+
+  /* Decorative corner ornaments */
+  .corner {
+    position: absolute;
+    width: 40px;
+    height: 40px;
+    opacity: 0.5;
+  }
+  .corner-tl { top: 8px; left: 8px; }
+  .corner-tr { top: 8px; right: 8px; transform: scaleX(-1); }
+  .corner-bl { bottom: 8px; left: 8px; transform: scaleY(-1); }
+  .corner-br { bottom: 8px; right: 8px; transform: scale(-1); }
+
+  /* The letter content */
+  .letter-wrapper {
+    width: 100%;
+    animation: letter-in 0.8s 0.3s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+  @keyframes letter-in {
+    from { opacity: 0; transform: translateY(12px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .letter-from {
+    font-family: 'Cinzel', serif;
+    font-size: 10px;
+    color: var(--sepia-light);
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+    opacity: 0.7;
+  }
+
+  .letter-subject {
+    font-family: 'Cinzel Decorative', serif;
+    font-size: 17px;
+    color: var(--sepia-deep);
+    margin-bottom: 6px;
+    line-height: 1.3;
+  }
+
+  .letter-date {
+    font-family: 'IM Fell English', serif;
+    font-size: 11px;
+    color: var(--sepia-mid);
+    font-style: italic;
+    margin-bottom: 18px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid rgba(92, 61, 30, 0.3);
+  }
+
+  .divider-ornament {
+    text-align: center;
+    color: var(--gold);
+    font-size: 18px;
+    margin-bottom: 18px;
+    opacity: 0.6;
+    letter-spacing: 8px;
+  }
+
+  .letter-body {
+    font-family: 'IM Fell English', serif;
+    font-size: 14.5px;
+    color: var(--ink-faded);
+    line-height: 1.85;
+    white-space: pre-line;
+  }
+  .letter-body em {
+    color: var(--red-accent);
+    font-style: italic;
+  }
+  .letter-body strong {
+    color: var(--sepia-deep);
+    font-style: normal;
+  }
+
+  .letter-signature {
+    margin-top: 24px;
+    padding-top: 16px;
+    border-top: 1px solid rgba(92, 61, 30, 0.2);
+    text-align: right;
+    font-family: 'UnifrakturMaguntia', cursive;
+    font-size: 22px;
+    color: var(--sepia-mid);
+    line-height: 1.5;
+  }
+  .letter-signature small {
+    display: block;
+    font-family: 'IM Fell English', serif;
+    font-size: 11px;
+    color: var(--sepia-light);
+    font-style: italic;
+    margin-top: 4px;
+  }
+
+  /* Red wax seal decoration */
+  .wax-seal {
+    position: absolute;
+    bottom: 48px;
+    right: 30px;
+    width: 52px;
+    height: 52px;
+    opacity: 0.75;
+  }
+
+  /* Top game header bar (decorative) */
+  .game-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 0 10px 80px;
+    animation: scene-in 1s 0.1s both;
+  }
+  .back-btn {
+    width: 44px;
+    height: 44px;
+    background: linear-gradient(135deg, #3d2810, #2a1a0a);
+    border: 1.5px solid rgba(184, 134, 11, 0.4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    clip-path: polygon(0 0, 80% 0, 100% 20%, 100% 100%, 0 100%);
+  }
+  .back-btn svg { width: 20px; height: 20px; fill: var(--parchment-dark); }
+
+  /* Bottom button bar */
+  .bottom-bar {
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+    margin-top: 12px;
+    animation: scene-in 1.2s 0.4s both;
+  }
+  .bottom-btn {
+    padding: 10px 28px;
+    background: linear-gradient(180deg, #4a3010 0%, #2a1a0a 100%);
+    border: 1.5px solid rgba(184, 134, 11, 0.45);
+    color: var(--parchment);
+    font-family: 'Cinzel', serif;
+    font-size: 12px;
+    cursor: pointer;
+    letter-spacing: 0.08em;
+    transition: all 0.25s;
+    clip-path: polygon(8px 0, 100% 0, calc(100% - 8px) 100%, 0 100%);
+  }
+  .bottom-btn:hover {
+    background: linear-gradient(180deg, #6b4820 0%, #3d2810 100%);
+    color: var(--gold-light);
+    box-shadow: 0 0 12px rgba(184, 134, 11, 0.2);
+  }
+
+  /* Heart animation on open */
+  .heart-float {
+    position: fixed;
+    font-size: 16px;
+    animation: heart-rise 2.5s ease-out forwards;
+    pointer-events: none;
+    z-index: 999;
+    opacity: 0;
+  }
+  @keyframes heart-rise {
+    0% { transform: translateY(0) scale(0.5); opacity: 0; }
+    20% { opacity: 1; }
+    100% { transform: translateY(-200px) scale(1.2) rotate(var(--rot)); opacity: 0; }
+  }
+</style>
+</head>
+<body>
+
+<div class="particles" id="particles"></div>
+
+<div class="scene">
+  <!-- Game header -->
+  <div class="game-header">
+    <div class="back-btn">
+      <svg viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
+    </div>
+  </div>
+
+  <!-- Main mail panel -->
+  <div style="position:relative; display:flex;">
+    <!-- Tab sidebar -->
+    <div class="tab-bar">
+      <div class="tab">Friend</div>
+      <div class="tab active">Mail</div>
+      <div class="tab">Team</div>
+      <div class="tab">Add Friends</div>
+    </div>
+
+    <!-- Panel -->
+    <div class="mail-panel" style="flex:1;">
+      <!-- Mail list -->
+      <div class="mail-list">
+        <div class="mail-item active">
+          <div class="mail-icon">
+            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <rect x="2" y="4" width="20" height="16" rx="1" stroke="#5c3d1e" stroke-width="1.5" fill="rgba(232,213,176,0.3)"/>
+              <path d="M2 7l10 7 10-7" stroke="#5c3d1e" stroke-width="1.5"/>
+            </svg>
+          </div>
+          <div class="mail-meta">
+            <div class="mail-title">A Message For You ♡</div>
+            <div class="mail-date">2026-05-06</div>
+          </div>
+          <div class="read-stamp">New</div>
+        </div>
+
+        <div class="mail-item">
+          <div class="mail-icon">
+            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <rect x="3" y="6" width="18" height="13" rx="1" stroke="#8b6340" stroke-width="1.5" fill="rgba(184,150,90,0.2)"/>
+              <path d="M7 3h10v3H7z" stroke="#8b6340" stroke-width="1.5"/>
+              <path d="M9 11h6M9 14h4" stroke="#8b6340" stroke-width="1.5" stroke-linecap="round"/>
+            </svg>
+          </div>
+          <div class="mail-meta">
+            <div class="mail-title">Sharing Reward</div>
+            <div class="mail-date">2026-05-05</div>
+          </div>
+          <div class="read-stamp">Read</div>
+        </div>
+
+        <div class="mail-item">
+          <div class="mail-icon">
+            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <rect x="3" y="6" width="18" height="13" rx="1" stroke="#8b6340" stroke-width="1.5" fill="rgba(184,150,90,0.2)"/>
+              <path d="M7 3h10v3H7z" stroke="#8b6340" stroke-width="1.5"/>
+              <path d="M9 11h6M9 14h4" stroke="#8b6340" stroke-width="1.5" stroke-linecap="round"/>
+            </svg>
+          </div>
+          <div class="mail-meta">
+            <div class="mail-title">Experience Sharing Rew...</div>
+            <div class="mail-date">2026-05-05</div>
+          </div>
+          <div class="read-stamp">Read</div>
+        </div>
+
+        <div class="mail-item">
+          <div class="mail-icon">
+            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <rect x="3" y="6" width="18" height="13" rx="1" stroke="#8b6340" stroke-width="1.5" fill="rgba(184,150,90,0.2)"/>
+              <path d="M7 3h10v3H7z" stroke="#8b6340" stroke-width="1.5"/>
+              <path d="M9 11h6M9 14h4" stroke="#8b6340" stroke-width="1.5" stroke-linecap="round"/>
+            </svg>
+          </div>
+          <div class="mail-meta">
+            <div class="mail-title">Gift from the Developme...</div>
+            <div class="mail-date">2026-05-05</div>
+          </div>
+          <div class="read-stamp">Read</div>
+        </div>
+
+        <div class="mail-item">
+          <div class="mail-icon">
+            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <rect x="2" y="4" width="20" height="16" rx="1" stroke="#8b6340" stroke-width="1.5" fill="rgba(232,213,176,0.15)"/>
+              <path d="M2 7l10 7 10-7" stroke="#8b6340" stroke-width="1.5"/>
+            </svg>
+          </div>
+          <div class="mail-meta">
+            <div class="mail-title">Discount Card Expiratio...</div>
+            <div class="mail-date">2026-05-04</div>
+          </div>
+          <div class="read-stamp">Read</div>
+        </div>
+
+        <!-- Actions -->
+        <div class="mail-actions">
+          <button class="action-btn">Delete read mail</button>
+          <button class="action-btn">Mark as Read</button>
+        </div>
+      </div>
+
+      <!-- Letter content -->
+      <div class="mail-content">
+        <!-- Corner ornaments -->
+        <svg class="corner corner-tl" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M2 2 L2 20 Q2 2 20 2 Z" stroke="#8b6340" stroke-width="1" fill="none"/>
+          <path d="M2 2 Q10 10 20 2" stroke="#b8860b" stroke-width="0.8" fill="none"/>
+          <circle cx="2" cy="2" r="2" fill="#b8860b"/>
+        </svg>
+        <svg class="corner corner-tr" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M2 2 L2 20 Q2 2 20 2 Z" stroke="#8b6340" stroke-width="1" fill="none"/>
+          <path d="M2 2 Q10 10 20 2" stroke="#b8860b" stroke-width="0.8" fill="none"/>
+          <circle cx="2" cy="2" r="2" fill="#b8860b"/>
+        </svg>
+        <svg class="corner corner-bl" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M2 2 L2 20 Q2 2 20 2 Z" stroke="#8b6340" stroke-width="1" fill="none"/>
+          <path d="M2 2 Q10 10 20 2" stroke="#b8860b" stroke-width="0.8" fill="none"/>
+          <circle cx="2" cy="2" r="2" fill="#b8860b"/>
+        </svg>
+        <svg class="corner corner-br" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M2 2 L2 20 Q2 2 20 2 Z" stroke="#8b6340" stroke-width="1" fill="none"/>
+          <path d="M2 2 Q10 10 20 2" stroke="#b8860b" stroke-width="0.8" fill="none"/>
+          <circle cx="2" cy="2" r="2" fill="#b8860b"/>
+        </svg>
+
+        <div class="letter-wrapper">
+          <div class="letter-from">From: Your Person ♡</div>
+          <div class="letter-subject">A Letter Just For You</div>
+          <div class="letter-date">Received: 2026 · May 6th</div>
+
+          <div class="divider-ornament">❧ · · · ❧</div>
+
+          <div class="letter-body">My bby,
+
+I know you've been working SOOOOOO hard recently. I see every single bit of effort you're putting in. The late nighters gets me so worried about you. Even though you reassure that you'll be fine, I can't help but worry :c
+
+I just want you to know: <em>I am so incredibly proud of you.</em>
+
+<strong>You are so amazing</strong>, and I know that it'll be soooo rewarding once this assessment week is over. 
+
+After this, you deserve ALL the rest. I'll make sure to cheer you up and make you feel so good!!
+
+And always remember that, <strong><em>I love you so, so much.</em></strong>
+
+I'll always be right here cheering you on. 🌹</div>
+
+          <div class="letter-signature">
+            Sincerely,
+            <small>You're in my heart · forever &amp; always</small>
+          </div>
+        </div>
+
+        <!-- Wax seal SVG -->
+        <svg class="wax-seal" viewBox="0 0 52 52" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="26" cy="26" r="24" fill="#8b1a1a" opacity="0.85"/>
+          <circle cx="26" cy="26" r="20" stroke="rgba(255,200,150,0.3)" stroke-width="1" fill="none"/>
+          <text x="26" y="31" text-anchor="middle" font-size="18" fill="rgba(255,200,180,0.7)" font-family="serif">♡</text>
+        </svg>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bottom buttons -->
+  <div class="bottom-bar">
+    <button class="bottom-btn" onclick="spawnHearts()">♡ Collect</button>
+  </div>
+</div>
+
+<script>
+  // Floating dust particles
+  const container = document.getElementById('particles');
+  for (let i = 0; i < 25; i++) {
+    const p = document.createElement('div');
+    p.className = 'particle';
+    const delay = Math.random() * 12;
+    const duration = 8 + Math.random() * 10;
+    const left = Math.random() * 100;
+    const drift = (Math.random() - 0.5) * 80;
+    p.style.cssText = `
+      left: ${left}%;
+      bottom: -5px;
+      animation-delay: ${delay}s;
+      animation-duration: ${duration}s;
+      --drift: ${drift}px;
+      width: ${1 + Math.random() * 2}px;
+      height: ${1 + Math.random() * 2}px;
+    `;
+    container.appendChild(p);
+  }
+
+  // Hearts on collect
+  function spawnHearts() {
+    const emojis = ['♡', '❤', '🌹', '♡', '✦', '♡'];
+    for (let i = 0; i < 12; i++) {
+      setTimeout(() => {
+        const h = document.createElement('div');
+        h.className = 'heart-float';
+        h.textContent = emojis[Math.floor(Math.random() * emojis.length)];
+        h.style.cssText = `
+          left: ${30 + Math.random() * 40}%;
+          bottom: 80px;
+          --rot: ${(Math.random()-0.5)*30}deg;
+          animation-delay: ${i * 0.08}s;
+          color: hsl(${340 + Math.random()*30}, 70%, 55%);
+          font-size: ${12 + Math.random() * 12}px;
+        `;
+        document.body.appendChild(h);
+        setTimeout(() => h.remove(), 2600);
+      }, i * 80);
+    }
+  }
+</script>
+</body>
+</html>
